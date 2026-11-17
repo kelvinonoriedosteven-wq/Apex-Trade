@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ApexTrade Android App — Official Download</title>
+  <style>
+    :root {
+      --bg: #070D17;
+      --surface: #0F172A;
+      --surface-elevated: #162238;
+      --outline: #23324D;
+      --emerald: #10B981;
+      --emerald-dim: rgba(16, 185, 129, 0.14);
+      --gold: #F59E0B;
+      --gold-dim: rgba(245, 158, 11, 0.14);
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+      --danger: #EF4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: radial-gradient(circle at top, #0E1B30 0%, var(--bg) 55%);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .container { max-width: 820px; margin: 0 auto; padding: 28px 18px 56px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .logo-mark {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      display: grid; place-items: center;
+      font-weight: 800; font-size: 20px; color: #04100C;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+    }
+    .brand-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand-sub { font-size: 11px; color: var(--emerald); font-weight: 700; letter-spacing: 0.08em; }
+    nav a {
+      color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 16px;
+    }
+    nav a:hover { color: var(--emerald); }
+    .hero-card {
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 22px;
+      padding: 26px 22px;
+      margin-bottom: 20px;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--emerald-dim); color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .pill.pending {
+      background: var(--gold-dim); color: var(--gold);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    h1 { font-size: clamp(26px, 4.5vw, 34px); line-height: 1.2; margin-bottom: 10px; }
+    .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 22px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--emerald); color: #04100C;
+      font-weight: 700; font-size: 15px; padding: 14px 24px; border-radius: 14px;
+      text-decoration: none; border: none; cursor: pointer;
+    }
+    .btn-primary.disabled {
+      background: #1E293B; color: #94A3B8; cursor: not-allowed; pointer-events: none;
+    }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface-elevated); color: var(--text);
+      border: 1px solid var(--outline); font-weight: 600; font-size: 14px;
+      padding: 13px 18px; border-radius: 14px; text-decoration: none;
+    }
+    .meta-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 10px; margin-top: 12px;
+    }
+    .meta-item {
+      background: var(--bg); border: 1px solid var(--outline);
+      border-radius: 14px; padding: 12px;
+    }
+    .meta-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .meta-val { font-size: 14px; font-weight: 600; margin-top: 2px; word-break: break-all; }
+    .section {
+      background: var(--surface); border: 1px solid var(--outline);
+      border-radius: 20px; padding: 22px; margin-bottom: 18px;
+    }
+    .section h2 { font-size: 18px; margin-bottom: 12px; color: var(--text); }
+    ol, ul { padding-left: 20px; color: var(--muted); font-size: 14px; }
+    li { margin-bottom: 8px; }
+    code {
+      display: block; background: var(--bg); border: 1px solid var(--outline);
+      padding: 10px 12px; border-radius: 10px; font-size: 12px; color: var(--emerald);
+      overflow-x: auto; margin-top: 8px;
+    }
+    footer {
+      text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px;
+    }
+    footer a { color: var(--emerald); text-decoration: none; margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="./index.html">
+        <div class="logo-mark">AT</div>
+        <div>
+          <div class="brand-title">ApexTrade</div>
+          <div class="brand-sub">GLOBAL MULTI-ASSET BROKERAGE</div>
+        </div>
+      </a>
+      <nav>
+        <a href="./releases.html">Release History</a>
+        <a href="#install">Install Guide</a>
+        <a href="#legal">Privacy &amp; Terms</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero-card">
+        <span id="status-pill" class="pill pending">Checking Published GitHub Release...</span>
+        <h1>Download ApexTrade for Android</h1>
+        <p class="subtitle">
+          Trade global stocks, ETFs, indices, commodities, bonds, futures, forex, and 24/7 cryptocurrencies
+          from your mobile portfolio with real-time charts, KYC verification, wallet custody, and Gemini AI insights.
+        </p>
+
+        <div class="cta-row">
+          <a id="download-btn" class="btn-primary disabled" href="#" aria-disabled="true">
+            Download Android APK (Pending Publication)
+          </a>
+          <a class="btn-secondary" href="./releases.html">Previous Releases</a>
+        </div>
+
+        <p id="status-note" style="font-size:13px;color:var(--gold);margin-bottom:14px;">
+          Configure your GitHub repository owner/name below and publish a signed release tag (<code>v1.0.0</code>) via
+          <code>.github/workflows/publish-apk.yml</code> to activate the live customer APK link.
+        </p>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Package ID</div>
+            <div class="meta-val">com.aistudio.apextrade.vxqrmz</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Version</div>
+            <div class="meta-val" id="meta-version">v1.0 (Build 1)</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">APK File Size</div>
+            <div class="meta-val" id="meta-size">Verify after release</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Release Date</div>
+            <div class="meta-val" id="meta-date">Pending tag release</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Supported OS</div>
+            <div class="meta-val">Android 7.0+ (API 24–36)</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Signing Identity</div>
+            <div class="meta-val">Upload Key SHA-256 Verified</div>
+          </div>
+        </div>
+
+        <div class="meta-item" style="margin-top:12px;">
+          <div class="meta-label">APK SHA-256 Checksum</div>
+          <div class="meta-val" id="meta-sha256" style="font-family:monospace;font-size:12px;color:var(--emerald);">
+            Published automatically in GitHub Release asset brokerage-android.apk.sha256
+          </div>
+        </div>
+      </section>
+
+      <section id="install" class="section">
+        <h2>Android Installation Instructions</h2>
+        <ol>
+          <li>Tap <strong>Download Android APK</strong> above on your Android phone to download <code>brokerage-android.apk</code>.</li>
+          <li>When Chrome or your file manager asks to confirm, tap <strong>Download anyway</strong>.</li>
+          <li>Open the downloaded APK file. If prompted, tap <strong>Settings</strong> and toggle on <strong>Allow from this source</strong> for your browser or Files app.</li>
+          <li>Tap <strong>Install</strong>, then open <strong>ApexTrade</strong> from your home screen and sign in with Google to access your brokerage portfolio.</li>
+        </ol>
+        <p style="font-size:13px;color:var(--muted);margin-top:10px;">Optional integrity verification (macOS / Linux / Android Termux):</p>
+        <code>sha256sum brokerage-android.apk</code>
+      </section>
+
+      <section id="legal" class="section">
+        <h2>Privacy Policy, Terms &amp; Support</h2>
+        <ul>
+          <li><strong>Privacy Policy:</strong> ApexTrade collects Google Sign-In profile data, user-submitted KYC verification payloads, deposit proof images (via zero-permission Android Photo Picker), and brokerage order/ledger records exclusively to operate your account over HTTPS and Cloud Firestore.</li>
+          <li><strong>Terms &amp; Settlement SLA:</strong> KYC verifications, deposit proofs, and withdrawal requests initialize in <em>Pending</em> status and undergo administrative review within 24 hours. Trading equities, ETFs, crypto, commodities, indices, bonds, futures, and forex carries capital risk.</li>
+          <li><strong>Customer Support:</strong> Open the in-app Support Desk inside <em>Account &rarr; Brokerage Support Desk</em> or email <a href="mailto:saraizabel8189@gmail.com" style="color:var(--emerald);">saraizabel8189@gmail.com</a>.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      ApexTrade Global Multi-Asset Brokerage &bull; Android Package <code>com.aistudio.apextrade.vxqrmz</code><br />
+      <a href="../play-store/PRIVACY_AND_TERMS.md">Full Legal Docs</a>
+      <a href="./releases.html">All Releases</a>
+    </footer>
+  </div>
+
+  <script>
+    (async function () {
+      // Set these constants once you connect GitHub, or deploy to GitHub Pages (*.github.io/REPO)
+      const CONFIGURED_OWNER = "";
+      const CONFIGURED_REPO = "";
+
+      function inferRepoFromHost() {
+        if (CONFIGURED_OWNER && CONFIGURED_REPO) {
+          return { owner: CONFIGURED_OWNER, repo: CONFIGURED_REPO };
+        }
+        const host = window.location.hostname || "";
+        if (host.endsWith(".github.io")) {
+          const owner = host.replace(".github.io", "");
+          const segments = window.location.pathname.split("/").filter(Boolean);
+          const repo = segments[0] || "";
+          if (owner && repo) return { owner, repo };
+        }
+        return null;
+      }
+
+      const repoInfo = inferRepoFromHost();
+      if (!repoInfo) return;
+
+      const apiUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/releases/latest`;
+      const pill = document.getElementById("status-pill");
+      const btn = document.getElementById("download-btn");
+      const note = document.getElementById("status-note");
+
+      try {
+        const res = await fetch(apiUrl, { headers: { Accept: "application/vnd.github+json" } });
+        if (!res.ok) throw new Error("No published release found");
+        const release = await res.json();
+        const apkAsset = (release.assets || []).find(a => a.name === "brokerage-android.apk");
+        if (!apkAsset) throw new Error("brokerage-android.apk asset not attached yet");
+
+        const latestDownloadUrl = `https://github.com/${repoInfo.owner}/${repoInfo.repo}/releases/latest/download/brokerage-android.apk`;
+        btn.href = latestDownloadUrl;
+        btn.classList.remove("disabled");
+        btn.removeAttribute("aria-disabled");
+        btn.textContent = `Download ApexTrade APK (${release.tag_name})`;
+
+        pill.textContent = `Verified Release • ${release.tag_name}`;
+        pill.classList.remove("pending");
+        note.style.color = "var(--emerald)";
+        note.textContent = `Direct download ready from GitHub Releases (${repoInfo.owner}/${repoInfo.repo}).`;
+
+        document.getElementById("meta-version").textContent = release.tag_name;
+        document.getElementById("meta-size").textContent = `${(apkAsset.size / (1024 * 1024)).toFixed(2)} MB`;
+        document.getElementById("meta-date").textContent = new Date(release.published_at).toLocaleDateString();
+
+        const shaAsset = (release.assets || []).find(a => a.name === "brokerage-android.apk.sha256");
+        if (shaAsset && shaAsset.digest) {
+          document.getElementById("meta-sha256").textContent = shaAsset.digest;
+        } else if (apkAsset.digest) {
+          document.getElementById("meta-sha256").textContent = apkAsset.digest;
+        }
+      } catch (err) {
+        pill.textContent = "Release Not Yet Published";
+        note.textContent = `Repository ${repoInfo.owner}/${repoInfo.repo} detected, but no published GitHub Release with brokerage-android.apk was found yet.`;
+      }
+    })();
+  </script>
+</body>
+</html>

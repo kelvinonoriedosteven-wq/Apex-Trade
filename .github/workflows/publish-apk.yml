@@ -1,0 +1,135 @@
+name: Build and Publish ApexTrade Android APK & AAB
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    name: Test, Build & Sign ApexTrade Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Materialize debug keystore for debug builds & Robolectric tests
+        run: |
+          if [ ! -f debug.keystore ] && [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+
+      - name: Configure optional environment secrets (.env)
+        run: |
+          touch .env
+          if [ -n "${{ secrets.RESEND_API_KEY }}" ]; then
+            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
+          fi
+          if [ -n "${{ secrets.RESEND_FROM_EMAIL }}" ]; then
+            echo "RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}" >> .env
+          fi
+
+      - name: Run JVM & Robolectric unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      - name: Build Debug APK (for internal QA testing only)
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Verify Debug APK exists & compute SHA-256
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/brokerage-android-debug.apk
+          sha256sum dist/brokerage-android-debug.apk > dist/brokerage-android-debug.apk.sha256
+          cat dist/brokerage-android-debug.apk.sha256
+
+      - name: Decode Release Upload Keystore (when secrets configured)
+        id: signing
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.STORE_PASSWORD }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/my-upload-key.jks"
+            echo "has_release_signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_release_signing=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release signing secrets (ANDROID_KEYSTORE_BASE64, STORE_PASSWORD, KEY_PASSWORD) are not configured. Skipping signed release APK & AAB."
+          fi
+
+      - name: Build Signed Release APK & Play Store AAB
+        if: steps.signing.outputs.has_release_signing == 'true'
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          gradle :app:assembleRelease :app:bundleRelease --no-daemon
+          test -s app/build/outputs/apk/release/app-release.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+          cp app/build/outputs/apk/release/app-release.apk dist/brokerage-android.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/brokerage-android.aab
+          sha256sum dist/brokerage-android.apk > dist/brokerage-android.apk.sha256
+          sha256sum dist/brokerage-android.aab > dist/brokerage-android.aab.sha256
+          cat dist/brokerage-android.apk.sha256
+
+      - name: Clean up sensitive keystore material
+        if: always()
+        run: rm -f "${{ github.workspace }}/my-upload-key.jks" .env
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apextrade-debug-apk
+          path: |
+            dist/brokerage-android-debug.apk
+            dist/brokerage-android-debug.apk.sha256
+
+      - name: Upload Signed Release APK & AAB Artifacts
+        if: steps.signing.outputs.has_release_signing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apextrade-release-bundle
+          path: |
+            dist/brokerage-android.apk
+            dist/brokerage-android.apk.sha256
+            dist/brokerage-android.aab
+            dist/brokerage-android.aab.sha256
+
+      - name: Publish GitHub Release (on v* tag with release signing)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.has_release_signing == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ### ApexTrade Android Release (${{ github.ref_name }})
+            - **Package ID:** `com.aistudio.apextrade.vxqrmz`
+            - **Customer Direct APK:** `brokerage-android.apk`
+            - **Google Play Bundle:** `brokerage-android.aab`
+            - **Integrity Verification:** Compare against `brokerage-android.apk.sha256`
+          files: |
+            dist/brokerage-android.apk
+            dist/brokerage-android.apk.sha256
+            dist/brokerage-android.aab
+            dist/brokerage-android.aab.sha256
+
+      - name: Fail tag release if signing secrets are missing
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.has_release_signing != 'true'
+        run: |
+          echo "::error::Cannot publish a production GitHub Release without ANDROID_KEYSTORE_BASE64, STORE_PASSWORD, and KEY_PASSWORD secrets."
+          exit 1

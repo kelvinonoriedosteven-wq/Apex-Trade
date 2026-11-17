@@ -226,6 +226,74 @@ fun CustomerSecurityAndPrefsSection(
         }
     }
 
+    var showLegalDialog by remember { mutableStateOf<String?>(null) }
+
+    // 4. Legal, Privacy, Account Recovery & App Version Card
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = ObsidianSurface,
+        border = BorderStroke(1.dp, ObsidianOutline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Security, contentDescription = null, tint = EmeraldAlpha, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Compliance, Legal & Account Recovery", style = MaterialTheme.typography.titleMedium)
+            }
+            Text(
+                "Authentication, email verification, and password recovery are secured by Google Identity & Firebase Auth. App version: v1.0 (Build 1).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showLegalDialog = "privacy" },
+                    border = BorderStroke(1.dp, ObsidianOutline),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f).testTag("privacy_policy_button")
+                ) {
+                    Text("Privacy Policy", style = MaterialTheme.typography.labelMedium)
+                }
+                OutlinedButton(
+                    onClick = { showLegalDialog = "terms" },
+                    border = BorderStroke(1.dp, ObsidianOutline),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f).testTag("terms_conditions_button")
+                ) {
+                    Text("Terms & Risk", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+
+    if (showLegalDialog != null) {
+        val isPrivacy = showLegalDialog == "privacy"
+        AlertDialog(
+            onDismissRequest = { showLegalDialog = null },
+            containerColor = ObsidianSurface,
+            title = {
+                Text(if (isPrivacy) "ApexTrade Privacy Policy" else "Terms, Custody & Market Risk")
+            },
+            text = {
+                Text(
+                    text = if (isPrivacy) {
+                        "ApexTrade collects your Google Sign-In profile (name, verified email), KYC verification records, deposit proofs, withdrawal details, and order ledger strictly for brokerage custody, compliance review, and real-time portfolio sync via encrypted HTTPS and Cloud Firestore. KYC and deposit proofs are selected via the zero-permission Android Photo Picker."
+                    } else {
+                        "All KYC submissions, deposit proofs, and manual withdrawal payouts initialize in Pending status and undergo manual compliance review within 24 hours. High-value payouts require dual Maker-Checker Admin sign-off. Equities, ETFs, crypto, commodities, indices, bonds, futures, and forex involve market risk. Support contact: saraizabel8189@gmail.com."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showLegalDialog = null }) {
+                    Text("Close", color = EmeraldAlpha)
+                }
+            }
+        )
+    }
+
     if (showPinSetupDialog) {
         AlertDialog(
             onDismissRequest = { showPinSetupDialog = false },
