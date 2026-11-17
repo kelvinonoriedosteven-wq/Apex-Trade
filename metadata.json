@@ -1,0 +1,6 @@
+{
+  "name": "ApexTrade",
+  "description": "Global multi-asset brokerage and investment platform for worldwide equities, indices, commodities, forex, and cryptocurrencies with real-time charts, portfolio tracking, and an admin control dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

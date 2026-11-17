@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">ApexTrade</string>
+    <string name="auth_brand_subtitle">GLOBAL MULTI-ASSET BROKERAGE</string>
+    <string name="auth_live_badge">WORLDWIDE MARKETS • REAL-TIME</string>
+    <string name="auth_headline">Trade Global Stocks, Crypto &amp; Macro</string>
+    <string name="auth_subheadline">Direct access to equities across 190+ markets, 24/7 cryptocurrencies, indices, commodities, and forex with real-time analytics.</string>
+    <string name="auth_card_title">Institutional Custody &amp; Cloud Sync</string>
+    <string name="auth_card_caption">Sign in with Google to create your live brokerage portfolio, sync trades, and access real-time market charts.</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="hero_banner_desc">ApexTrade global financial markets visualization</string>
+    <string name="nav_markets">Markets</string>
+    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_trades">Orders</string>
+    <string name="nav_account">Account</string>
+</resources>

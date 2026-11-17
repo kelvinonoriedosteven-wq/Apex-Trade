@@ -1,0 +1,716 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        'email' in request.auth.token &&
+        request.auth.token.email == 'saraizabel8189@gmail.com' &&
+        'email_verified' in request.auth.token &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidAssetClass(val) {
+      return val is string && val in ['stock', 'etf', 'crypto', 'index', 'bond', 'futures', 'commodity', 'forex'];
+    }
+
+    function isValidFundingMethod(val) {
+      return val is string && val in ['USDT_TRC20', 'USDT_ERC20', 'BTC', 'ETH', 'BANK_WIRE'];
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUserAccount(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.cashBalanceUsd is number && data.cashBalanceUsd >= 0 && data.cashBalanceUsd <= 1000000000 &&
+             data.totalDepositedUsd is number && data.totalDepositedUsd >= 0 && data.totalDepositedUsd <= 1000000000 &&
+             data.pendingWithdrawalUsd is number && data.pendingWithdrawalUsd >= 0 && data.pendingWithdrawalUsd <= 1000000000 &&
+             data.kycStatus is string && data.kycStatus in ['not_submitted', 'pending', 'approved', 'rejected'] &&
+             (!('kycRejectionReason' in data) || data.kycRejectionReason == null || (data.kycRejectionReason is string && data.kycRejectionReason.size() <= 300)) &&
+             data.traderMode is string && data.traderMode in ['beginner', 'pro'] &&
+             data.accountStatus is string && data.accountStatus in ['active', 'suspended'] &&
+             (!('referralCode' in data) || data.referralCode == null || (data.referralCode is string && data.referralCode.size() <= 32)) &&
+             (!('referredBy' in data) || data.referredBy == null || (data.referredBy is string && data.referredBy.size() <= 32)) &&
+             (!('twoFactorPinEnabled' in data) || data.twoFactorPinEnabled is bool) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidKycSubmission(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.fullLegalName is string && data.fullLegalName.size() >= 2 && data.fullLegalName.size() <= 120 &&
+             data.country is string && data.country.size() >= 2 && data.country.size() <= 80 &&
+             data.dateOfBirth is string && data.dateOfBirth.size() >= 4 && data.dateOfBirth.size() <= 30 &&
+             data.idType is string && data.idType in ['Passport', 'National ID', 'Driver\'s License'] &&
+             data.idNumber is string && data.idNumber.size() >= 3 && data.idNumber.size() <= 60 &&
+             data.docImageBase64 is string && data.docImageBase64.size() >= 10 && data.docImageBase64.size() <= 350000 &&
+             data.status is string && data.status in ['pending', 'approved', 'rejected'] &&
+             (!('rejectionReason' in data) || data.rejectionReason == null || (data.rejectionReason is string && data.rejectionReason.size() <= 300)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDepositRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userDisplayName is string && data.userDisplayName.size() >= 1 && data.userDisplayName.size() <= 100 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.amountUsd is number && data.amountUsd >= 10 && data.amountUsd <= 10000000 &&
+             isValidFundingMethod(data.method) &&
+             data.walletAddressUsed is string && data.walletAddressUsed.size() >= 4 && data.walletAddressUsed.size() <= 300 &&
+             data.txHash is string && data.txHash.size() >= 4 && data.txHash.size() <= 180 &&
+             data.proofImageBase64 is string && data.proofImageBase64.size() >= 10 && data.proofImageBase64.size() <= 350000 &&
+             data.status is string && data.status in ['pending', 'approved', 'rejected'] &&
+             (!('adminNote' in data) || data.adminNote == null || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWithdrawalRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userDisplayName is string && data.userDisplayName.size() >= 1 && data.userDisplayName.size() <= 100 &&
+             data.userEmail is string && data.userEmail.size() >= 3 && data.userEmail.size() <= 200 &&
+             data.amountUsd is number && data.amountUsd >= 10 && data.amountUsd <= 10000000 &&
+             isValidFundingMethod(data.method) &&
+             data.destinationDetails is string && data.destinationDetails.size() >= 5 && data.destinationDetails.size() <= 350 &&
+             data.accountHolderName is string && data.accountHolderName.size() >= 2 && data.accountHolderName.size() <= 120 &&
+             (!('payoutReference' in data) || data.payoutReference == null || (data.payoutReference is string && data.payoutReference.size() <= 180)) &&
+             data.status is string && data.status in ['pending', 'paid', 'rejected'] &&
+             (!('adminNote' in data) || data.adminNote == null || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPortfolioHolding(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 32 &&
+             data.assetName is string && data.assetName.size() >= 1 && data.assetName.size() <= 120 &&
+             isValidAssetClass(data.assetClass) &&
+             data.countryCode is string && data.countryCode.size() >= 2 && data.countryCode.size() <= 12 &&
+             data.exchange is string && data.exchange.size() >= 1 && data.exchange.size() <= 40 &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 1000000000 &&
+             data.avgBuyPriceUsd is number && data.avgBuyPriceUsd > 0 && data.avgBuyPriceUsd <= 100000000 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWatchlistEntry(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 32 &&
+             data.addedAt is timestamp && data.addedAt <= request.time;
+    }
+
+    function isValidTradeOrder(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userDisplayName is string && data.userDisplayName.size() >= 1 && data.userDisplayName.size() <= 100 &&
+             (!('userEmail' in data) || data.userEmail == null || (data.userEmail is string && data.userEmail.size() <= 200)) &&
+             data.symbol is string && data.symbol.size() >= 1 && data.symbol.size() <= 32 &&
+             data.assetName is string && data.assetName.size() >= 1 && data.assetName.size() <= 120 &&
+             isValidAssetClass(data.assetClass) &&
+             data.countryCode is string && data.countryCode.size() >= 2 && data.countryCode.size() <= 12 &&
+             data.exchange is string && data.exchange.size() >= 1 && data.exchange.size() <= 40 &&
+             data.side is string && data.side in ['BUY', 'SELL'] &&
+             data.orderType is string && data.orderType in ['MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT'] &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 1000000000 &&
+             data.executionPriceUsd is number && data.executionPriceUsd > 0 && data.executionPriceUsd <= 100000000 &&
+             (!('triggerPriceUsd' in data) || data.triggerPriceUsd == null || (data.triggerPriceUsd is number && data.triggerPriceUsd > 0 && data.triggerPriceUsd <= 100000000)) &&
+             data.grossAmountUsd is number && data.grossAmountUsd > 0 && data.grossAmountUsd <= 1000000000 &&
+             data.commissionBps is number && data.commissionBps >= 0 && data.commissionBps <= 1000 &&
+             data.commissionUsd is number && data.commissionUsd >= 0 && data.commissionUsd <= 100000000 &&
+             data.netTotalUsd is number && data.netTotalUsd >= 0 && data.netTotalUsd <= 1000000000 &&
+             data.status is string && data.status in ['FILLED', 'PENDING', 'CANCELLED'] &&
+             (!('cancelReason' in data) || data.cancelReason == null || (data.cancelReason is string && data.cancelReason.size() <= 200)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBrokerConfig(data) {
+      return data.stockCommissionBps is number && data.stockCommissionBps >= 0 && data.stockCommissionBps <= 500 &&
+             (!('etfCommissionBps' in data) || (data.etfCommissionBps is number && data.etfCommissionBps >= 0 && data.etfCommissionBps <= 500)) &&
+             data.cryptoCommissionBps is number && data.cryptoCommissionBps >= 0 && data.cryptoCommissionBps <= 500 &&
+             data.forexCommissionBps is number && data.forexCommissionBps >= 0 && data.forexCommissionBps <= 500 &&
+             data.commodityCommissionBps is number && data.commodityCommissionBps >= 0 && data.commodityCommissionBps <= 500 &&
+             data.indexCommissionBps is number && data.indexCommissionBps >= 0 && data.indexCommissionBps <= 500 &&
+             (!('bondCommissionBps' in data) || (data.bondCommissionBps is number && data.bondCommissionBps >= 0 && data.bondCommissionBps <= 500)) &&
+             (!('futuresCommissionBps' in data) || (data.futuresCommissionBps is number && data.futuresCommissionBps >= 0 && data.futuresCommissionBps <= 500)) &&
+             data.minOrderUsd is number && data.minOrderUsd >= 1 && data.minOrderUsd <= 10000 &&
+             (!('makerCheckerThresholdUsd' in data) || (data.makerCheckerThresholdUsd is number && data.makerCheckerThresholdUsd >= 100 && data.makerCheckerThresholdUsd <= 10000000)) &&
+             data.tradingHalted is bool &&
+             (!('haltedSymbols' in data) || (data.haltedSymbols is list && data.haltedSymbols.size() <= 100)) &&
+             data.usdtTrc20Address is string && data.usdtTrc20Address.size() >= 4 && data.usdtTrc20Address.size() <= 200 &&
+             data.usdtErc20Address is string && data.usdtErc20Address.size() >= 4 && data.usdtErc20Address.size() <= 200 &&
+             data.btcWalletAddress is string && data.btcWalletAddress.size() >= 4 && data.btcWalletAddress.size() <= 200 &&
+             data.ethWalletAddress is string && data.ethWalletAddress.size() >= 4 && data.ethWalletAddress.size() <= 200 &&
+             data.bankWireDetails is string && data.bankWireDetails.size() >= 4 && data.bankWireDetails.size() <= 400 &&
+             data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminGrant(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.passcode is string && data.passcode == '25046371' &&
+             data.grantedAt is timestamp && data.grantedAt <= request.time;
+    }
+
+    function isValidLedgerEntry(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.entryType is string && data.entryType in [
+               'DEPOSIT_CREDIT', 'TRADE_BUY_DEBIT', 'TRADE_SELL_CREDIT',
+               'TRADE_ORDER_RESERVE', 'ORDER_CANCEL_REFUND', 'WITHDRAWAL_RESERVE',
+               'WITHDRAWAL_SETTLE', 'WITHDRAWAL_REFUND', 'ADMIN_ADJUSTMENT'
+             ] &&
+             data.direction is string && data.direction in ['CREDIT', 'DEBIT', 'SETTLE'] &&
+             data.amountUsd is number && data.amountUsd >= 0 && data.amountUsd <= 1000000000 &&
+             data.balanceBeforeUsd is number && data.balanceBeforeUsd >= 0 && data.balanceBeforeUsd <= 1000000000 &&
+             data.balanceAfterUsd is number && data.balanceAfterUsd >= 0 && data.balanceAfterUsd <= 1000000000 &&
+             data.referenceType is string && data.referenceType.size() >= 1 && data.referenceType.size() <= 60 &&
+             data.referenceId is string && data.referenceId.size() >= 1 && data.referenceId.size() <= 128 &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 300 &&
+             data.actorUid is string && data.actorUid == request.auth.uid &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidNotification(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 600 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 40 &&
+             data.severity is string && data.severity in ['INFO', 'SUCCESS', 'WARNING', 'ALERT'] &&
+             data.isRead is bool &&
+             data.isArchived is bool &&
+             (!('actionRoute' in data) || data.actionRoute == null || (data.actionRoute is string && data.actionRoute.size() <= 60)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. User Accounts & Subcollections
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().accountStatus == 'active' &&
+                       incoming().kycStatus == 'not_submitted' &&
+                       incoming().cashBalanceUsd == 0 &&
+                       incoming().totalDepositedUsd == 0 &&
+                       incoming().pendingWithdrawalUsd == 0 &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'email', 'cashBalanceUsd',
+                         'totalDepositedUsd', 'pendingWithdrawalUsd', 'kycStatus',
+                         'traderMode', 'accountStatus', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'email', 'photoUrl',
+                         'cashBalanceUsd', 'totalDepositedUsd', 'pendingWithdrawalUsd',
+                         'kycStatus', 'kycRejectionReason', 'traderMode',
+                         'accountStatus', 'referralCode', 'referredBy', 'twoFactorPinEnabled',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt <= request.time &&
+                       isValidUserAccount(incoming());
+
+      allow update: if isValidId(userId) &&
+                       isSignedIn() &&
+                       isValidUserAccount(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().email == existing().email &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (
+                           isAdmin() &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'accountStatus', 'cashBalanceUsd', 'totalDepositedUsd',
+                             'pendingWithdrawalUsd', 'kycStatus', 'kycRejectionReason',
+                             'traderMode', 'displayName', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           isOwner(userId) &&
+                           existing().accountStatus == 'active' &&
+                           incoming().accountStatus == existing().accountStatus &&
+                           incoming().totalDepositedUsd == existing().totalDepositedUsd &&
+                           (
+                             incoming().kycStatus == existing().kycStatus ||
+                             (existing().kycStatus in ['not_submitted', 'rejected'] && incoming().kycStatus == 'pending')
+                           ) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'displayName', 'photoUrl', 'cashBalanceUsd',
+                             'pendingWithdrawalUsd', 'kycStatus', 'traderMode',
+                             'referralCode', 'referredBy', 'twoFactorPinEnabled', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isValidId(userId) && isAdmin();
+
+      match /holdings/{holdingId} {
+        allow get: if isValidId(userId) && isValidId(holdingId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+
+        allow create: if isValidId(userId) && isValidId(holdingId) &&
+                         isOwner(userId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll([
+                           'userId', 'symbol', 'assetName', 'assetClass',
+                           'countryCode', 'exchange', 'quantity', 'avgBuyPriceUsd',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'symbol', 'assetName', 'assetClass',
+                           'countryCode', 'exchange', 'quantity', 'avgBuyPriceUsd',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt <= request.time &&
+                         isValidPortfolioHolding(incoming());
+
+        allow update: if isValidId(userId) && isValidId(holdingId) &&
+                         (isOwner(userId) || isAdmin()) &&
+                         isValidPortfolioHolding(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().symbol == existing().symbol &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'quantity', 'avgBuyPriceUsd', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(userId) && isValidId(holdingId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /watchlist/{symbolId} {
+        allow get: if isValidId(userId) && isValidId(symbolId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+
+        allow create: if isValidId(userId) && isValidId(symbolId) &&
+                         isOwner(userId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'symbol', 'addedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'symbol', 'addedAt']) &&
+                         isValidWatchlistEntry(incoming());
+
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(symbolId) && isOwner(userId);
+      }
+    }
+
+    // 2. KYC Identity Verification Submissions
+    match /kyc_requests/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'pending' &&
+                       incoming().keys().hasAll([
+                         'userId', 'userEmail', 'fullLegalName', 'country', 'dateOfBirth',
+                         'idType', 'idNumber', 'docImageBase64', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userEmail', 'fullLegalName', 'country', 'dateOfBirth',
+                         'idType', 'idNumber', 'docImageBase64', 'status', 'rejectionReason',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt <= request.time &&
+                       isValidKycSubmission(incoming());
+
+      allow update: if isValidId(userId) &&
+                       isSignedIn() &&
+                       isValidKycSubmission(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (
+                           isAdmin() &&
+                           incoming().status in ['approved', 'rejected'] &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rejectionReason', 'updatedAt'])
+                         ) ||
+                         (
+                           isOwner(userId) &&
+                           existing().status == 'rejected' &&
+                           incoming().status == 'pending' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'fullLegalName', 'country', 'dateOfBirth', 'idType',
+                             'idNumber', 'docImageBase64', 'status', 'rejectionReason', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 3. Deposit Proof Submissions (Pending until Admin Approves)
+    match /deposits/{depositId} {
+      allow get: if isValidId(depositId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(depositId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'pending' &&
+                       incoming().keys().hasAll([
+                         'userId', 'userDisplayName', 'userEmail', 'amountUsd', 'method',
+                         'walletAddressUsed', 'txHash', 'proofImageBase64', 'status',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userDisplayName', 'userEmail', 'amountUsd', 'method',
+                         'walletAddressUsed', 'txHash', 'proofImageBase64', 'status',
+                         'adminNote', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt <= request.time &&
+                       isValidDepositRequest(incoming());
+
+      allow update: if isValidId(depositId) &&
+                       isAdmin() &&
+                       isValidDepositRequest(incoming()) &&
+                       existing().status == 'pending' &&
+                       incoming().status in ['approved', 'rejected'] &&
+                       incoming().userId == existing().userId &&
+                       incoming().amountUsd == existing().amountUsd &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminNote', 'updatedAt']);
+
+      allow delete: if isValidId(depositId) && isAdmin();
+    }
+
+    // 4. Withdrawal Requests (Pending until Admin Pays Manually or Rejects)
+    match /withdrawals/{withdrawalId} {
+      allow get: if isValidId(withdrawalId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(withdrawalId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'pending' &&
+                       incoming().keys().hasAll([
+                         'userId', 'userDisplayName', 'userEmail', 'amountUsd', 'method',
+                         'destinationDetails', 'accountHolderName', 'status',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userDisplayName', 'userEmail', 'amountUsd', 'method',
+                         'destinationDetails', 'accountHolderName', 'payoutReference',
+                         'status', 'adminNote', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt <= request.time &&
+                       isValidWithdrawalRequest(incoming());
+
+      allow update: if isValidId(withdrawalId) &&
+                       isAdmin() &&
+                       isValidWithdrawalRequest(incoming()) &&
+                       existing().status == 'pending' &&
+                       incoming().status in ['paid', 'rejected'] &&
+                       incoming().userId == existing().userId &&
+                       incoming().amountUsd == existing().amountUsd &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'payoutReference', 'adminNote', 'updatedAt']);
+
+      allow delete: if isValidId(withdrawalId) && isAdmin();
+    }
+
+    // 5. Global Trade Execution & Pending Order Ledger
+    match /trades/{tradeId} {
+      allow get: if isValidId(tradeId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(tradeId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'userDisplayName', 'symbol', 'assetName',
+                         'assetClass', 'countryCode', 'exchange', 'side',
+                         'orderType', 'quantity', 'executionPriceUsd',
+                         'grossAmountUsd', 'commissionBps', 'commissionUsd',
+                         'netTotalUsd', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userDisplayName', 'userEmail', 'symbol', 'assetName',
+                         'assetClass', 'countryCode', 'exchange', 'side',
+                         'orderType', 'quantity', 'executionPriceUsd', 'triggerPriceUsd',
+                         'grossAmountUsd', 'commissionBps', 'commissionUsd',
+                         'netTotalUsd', 'status', 'cancelReason', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt <= request.time &&
+                       isValidTradeOrder(incoming());
+
+      allow update: if isValidId(tradeId) &&
+                       isSignedIn() &&
+                       isValidTradeOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().symbol == existing().symbol &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status == 'PENDING' &&
+                           incoming().status in ['FILLED', 'CANCELLED'] &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'status', 'executionPriceUsd', 'grossAmountUsd',
+                             'commissionUsd', 'netTotalUsd', 'cancelReason', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isValidId(tradeId) && isAdmin();
+    }
+
+    // 6. Global Broker Commission, Platform Settings & Admin Deposit Wallets
+    match /broker_config/{configId} {
+      allow get: if isSignedIn() && configId == 'global';
+      allow list: if false;
+
+      allow create, update: if isSignedIn() &&
+                               configId == 'global' &&
+                               isAdmin() &&
+                               incoming().keys().hasAll([
+                                 'stockCommissionBps', 'cryptoCommissionBps',
+                                 'forexCommissionBps', 'commodityCommissionBps',
+                                 'indexCommissionBps', 'minOrderUsd', 'tradingHalted',
+                                 'usdtTrc20Address', 'usdtErc20Address',
+                                 'btcWalletAddress', 'ethWalletAddress',
+                                 'bankWireDetails', 'updatedByUid', 'updatedAt'
+                               ]) &&
+                               incoming().keys().hasOnly([
+                                 'stockCommissionBps', 'etfCommissionBps', 'cryptoCommissionBps',
+                                 'forexCommissionBps', 'commodityCommissionBps',
+                                 'indexCommissionBps', 'bondCommissionBps', 'futuresCommissionBps',
+                                 'minOrderUsd', 'makerCheckerThresholdUsd', 'tradingHalted',
+                                 'haltedSymbols', 'usdtTrc20Address', 'usdtErc20Address',
+                                 'btcWalletAddress', 'ethWalletAddress',
+                                 'bankWireDetails', 'updatedByUid', 'updatedAt'
+                               ]) &&
+                               incoming().updatedByUid == request.auth.uid &&
+                               isValidBrokerConfig(incoming());
+
+      allow delete: if false;
+    }
+
+    // 7. Passcode-Gated Admin Unlock Grants
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().keys().hasAll(['userId', 'passcode', 'grantedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'passcode', 'grantedAt']) &&
+                       isValidAdminGrant(incoming());
+
+      allow update: if false;
+      allow delete: if isValidId(userId) && isOwner(userId);
+    }
+
+    // 8. Append-Only Double-Entry Financial Ledger (Immutable)
+    match /ledger_entries/{entryId} {
+      allow get: if isValidId(entryId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(entryId) &&
+                       isSignedIn() &&
+                       isValidLedgerEntry(incoming()) &&
+                       (
+                         isAdmin() ||
+                         (
+                           incoming().userId == request.auth.uid &&
+                           incoming().entryType in [
+                             'TRADE_BUY_DEBIT', 'TRADE_SELL_CREDIT',
+                             'TRADE_ORDER_RESERVE', 'ORDER_CANCEL_REFUND',
+                             'WITHDRAWAL_RESERVE'
+                           ]
+                         )
+                       );
+
+      allow update, delete: if false;
+    }
+
+    // 9. Persistent Real-Time User Notifications
+    match /notifications/{notifId} {
+      allow get: if isValidId(notifId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(notifId) &&
+                       isSignedIn() &&
+                       isValidNotification(incoming()) &&
+                       (isAdmin() || incoming().userId == request.auth.uid);
+
+      allow update: if isValidId(notifId) &&
+                       isSignedIn() &&
+                       (existing().userId == request.auth.uid || isAdmin()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().title == existing().title &&
+                       incoming().message == existing().message &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'isArchived']);
+
+      allow delete: if isValidId(notifId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 10. Customer Support Tickets
+    match /support_tickets/{ticketId} {
+      allow get: if isValidId(ticketId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isValidId(ticketId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'open' &&
+                       incoming().subject is string && incoming().subject.size() >= 3 && incoming().subject.size() <= 140 &&
+                       incoming().message is string && incoming().message.size() >= 5 && incoming().message.size() <= 2000 &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time;
+
+      allow update: if isValidId(ticketId) &&
+                       isSignedIn() &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().status in ['open', 'closed'] &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isValidId(ticketId) && isAdmin();
+    }
+
+    // 11. Platform Announcements (Signed-in Read, Admin Write)
+    match /announcements/{announcementId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isValidId(announcementId) && isAdmin();
+    }
+
+    // 12. Automated AML Risk Alerts (User can raise system alert on own high-value tx; Admin manages resolution)
+    match /aml_alerts/{alertId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(alertId) &&
+                       isSignedIn() &&
+                       incoming().status == 'open' &&
+                       (isAdmin() || incoming().userId == request.auth.uid);
+      allow update, delete: if isValidId(alertId) && isAdmin();
+    }
+
+    // 13. Dual-Control Maker-Checker High-Value Approvals (Checker != Maker enforced)
+    match /pending_approvals/{approvalId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(approvalId) &&
+                       isAdmin() &&
+                       incoming().makerUid == request.auth.uid &&
+                       incoming().status == 'pending_checker' &&
+                       incoming().createdAt is timestamp &&
+                       incoming().updatedAt is timestamp;
+      allow update: if isValidId(approvalId) &&
+                       isAdmin() &&
+                       existing().status == 'pending_checker' &&
+                       incoming().status in ['approved', 'rejected'] &&
+                       request.auth.uid != existing().makerUid &&
+                       incoming().checkerUid == request.auth.uid &&
+                       incoming().makerUid == existing().makerUid &&
+                       incoming().amountUsd == existing().amountUsd;
+      allow delete: if false;
+    }
+
+    // 14. Immutable Admin Audit Logs
+    match /audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(logId) &&
+                       isAdmin() &&
+                       incoming().actorUid == request.auth.uid &&
+                       incoming().createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    // 15. Admin RBAC Staff Roles
+    match /staff_roles/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 16. Active Device Login Sessions
+    match /user_sessions/{sessionId} {
+      allow get: if isValidId(sessionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(sessionId) && isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isValidId(sessionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin()) && incoming().userId == existing().userId;
+      allow delete: if isValidId(sessionId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 17. Notification & Email Preferences
+    match /notification_preferences/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isValidId(userId) && isOwner(userId) && incoming().userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // 18. Transactional Email System (Templates, Outbox Jobs, Suppressions)
+    match /email_templates/{templateKey} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /email_jobs/{jobId} {
+      allow get: if isValidId(jobId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(jobId) &&
+                       isSignedIn() &&
+                       (isAdmin() || incoming().userId == request.auth.uid) &&
+                       incoming().status in ['queued', 'awaiting_provider_config', 'suppressed'];
+      allow update: if isValidId(jobId) &&
+                       isSignedIn() &&
+                       (isAdmin() || existing().userId == request.auth.uid) &&
+                       incoming().userId == existing().userId &&
+                       incoming().idempotencyKey == existing().idempotencyKey;
+      allow delete: if isValidId(jobId) && isAdmin();
+    }
+
+    match /email_suppressions/{emailKey} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && (isAdmin() || ('email' in request.auth.token && incoming().email == request.auth.token.email));
+      allow update: if isAdmin();
+      allow delete: if isSignedIn() && (isAdmin() || ('email' in request.auth.token && existing().email == request.auth.token.email));
+    }
+  }
+}

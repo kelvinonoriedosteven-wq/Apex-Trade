@@ -1,0 +1,452 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Authenticated brokerage user account, cash balance, KYC status, mode preference, referral code, and security status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "cashBalanceUsd": { "type": "number" },
+        "totalDepositedUsd": { "type": "number" },
+        "pendingWithdrawalUsd": { "type": "number" },
+        "kycStatus": { "type": "string", "enum": ["not_submitted", "pending", "approved", "rejected"] },
+        "kycRejectionReason": { "type": "string" },
+        "traderMode": { "type": "string", "enum": ["beginner", "pro"] },
+        "accountStatus": { "type": "string", "enum": ["active", "suspended"] },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "twoFactorPinEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "displayName", "email", "cashBalanceUsd", "totalDepositedUsd",
+        "pendingWithdrawalUsd", "kycStatus", "traderMode", "accountStatus", "createdAt", "updatedAt"
+      ]
+    },
+    "KycSubmission": {
+      "title": "KycSubmission",
+      "description": "User identity verification submission pending 24-hour admin review.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "fullLegalName": { "type": "string" },
+        "country": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "idType": { "type": "string", "enum": ["Passport", "National ID", "Driver's License"] },
+        "idNumber": { "type": "string" },
+        "docImageBase64": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "rejectionReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "userEmail", "fullLegalName", "country", "dateOfBirth",
+        "idType", "idNumber", "docImageBase64", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "DepositRequest": {
+      "title": "DepositRequest",
+      "description": "User deposit submission with proof screenshot to admin-configured wallet address.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "method": { "type": "string", "enum": ["USDT_TRC20", "USDT_ERC20", "BTC", "ETH", "BANK_WIRE"] },
+        "walletAddressUsed": { "type": "string" },
+        "txHash": { "type": "string" },
+        "proofImageBase64": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "adminNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "userDisplayName", "userEmail", "amountUsd", "method",
+        "walletAddressUsed", "txHash", "proofImageBase64", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "User withdrawal request awaiting manual admin payout.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "method": { "type": "string", "enum": ["USDT_TRC20", "USDT_ERC20", "BTC", "ETH", "BANK_WIRE"] },
+        "destinationDetails": { "type": "string" },
+        "accountHolderName": { "type": "string" },
+        "payoutReference": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "paid", "rejected"] },
+        "adminNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "userDisplayName", "userEmail", "amountUsd", "method",
+        "destinationDetails", "accountHolderName", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "PortfolioHolding": {
+      "title": "PortfolioHolding",
+      "description": "Open investment position held by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "assetName": { "type": "string" },
+        "assetClass": { "type": "string", "enum": ["stock", "etf", "crypto", "index", "bond", "futures", "commodity", "forex"] },
+        "countryCode": { "type": "string" },
+        "exchange": { "type": "string" },
+        "quantity": { "type": "number" },
+        "avgBuyPriceUsd": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "symbol", "assetName", "assetClass", "countryCode", "exchange", "quantity", "avgBuyPriceUsd", "createdAt", "updatedAt"]
+    },
+    "WatchlistEntry": {
+      "title": "WatchlistEntry",
+      "description": "Watchlist symbol saved by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "symbol": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "symbol", "addedAt"]
+    },
+    "TradeOrder": {
+      "title": "TradeOrder",
+      "description": "Executed or pending limit/stop trade order with commission breakdown.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "symbol": { "type": "string" },
+        "assetName": { "type": "string" },
+        "assetClass": { "type": "string", "enum": ["stock", "etf", "crypto", "index", "bond", "futures", "commodity", "forex"] },
+        "countryCode": { "type": "string" },
+        "exchange": { "type": "string" },
+        "side": { "type": "string", "enum": ["BUY", "SELL"] },
+        "orderType": { "type": "string", "enum": ["MARKET", "LIMIT", "STOP", "STOP_LIMIT"] },
+        "quantity": { "type": "number" },
+        "executionPriceUsd": { "type": "number" },
+        "triggerPriceUsd": { "type": "number" },
+        "grossAmountUsd": { "type": "number" },
+        "commissionBps": { "type": "number" },
+        "commissionUsd": { "type": "number" },
+        "netTotalUsd": { "type": "number" },
+        "status": { "type": "string", "enum": ["FILLED", "PENDING", "CANCELLED"] },
+        "cancelReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "userDisplayName", "symbol", "assetName", "assetClass", "countryCode",
+        "exchange", "side", "orderType", "quantity", "executionPriceUsd", "grossAmountUsd",
+        "commissionBps", "commissionUsd", "netTotalUsd", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "BrokerConfig": {
+      "title": "BrokerConfig",
+      "description": "Global commission rates, trading controls, maker-checker threshold, halted instruments, and admin-managed deposit wallet addresses.",
+      "type": "object",
+      "properties": {
+        "stockCommissionBps": { "type": "number" },
+        "etfCommissionBps": { "type": "number" },
+        "cryptoCommissionBps": { "type": "number" },
+        "forexCommissionBps": { "type": "number" },
+        "commodityCommissionBps": { "type": "number" },
+        "indexCommissionBps": { "type": "number" },
+        "bondCommissionBps": { "type": "number" },
+        "futuresCommissionBps": { "type": "number" },
+        "minOrderUsd": { "type": "number" },
+        "makerCheckerThresholdUsd": { "type": "number" },
+        "tradingHalted": { "type": "boolean" },
+        "haltedSymbols": { "type": "array", "items": { "type": "string" } },
+        "usdtTrc20Address": { "type": "string" },
+        "usdtErc20Address": { "type": "string" },
+        "btcWalletAddress": { "type": "string" },
+        "ethWalletAddress": { "type": "string" },
+        "bankWireDetails": { "type": "string" },
+        "updatedByUid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "stockCommissionBps", "cryptoCommissionBps", "forexCommissionBps",
+        "commodityCommissionBps", "indexCommissionBps", "minOrderUsd", "tradingHalted",
+        "usdtTrc20Address", "usdtErc20Address", "btcWalletAddress", "ethWalletAddress",
+        "bankWireDetails", "updatedByUid", "updatedAt"
+      ]
+    },
+    "AdminGrant": {
+      "title": "AdminGrant",
+      "description": "Passcode-verified admin access grant.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "passcode": { "type": "string" },
+        "grantedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "passcode", "grantedAt"]
+    },
+    "LedgerEntry": {
+      "title": "LedgerEntry",
+      "description": "Append-only immutable double-entry financial ledger line.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "entryType": { "type": "string" },
+        "direction": { "type": "string", "enum": ["CREDIT", "DEBIT", "SETTLE"] },
+        "amountUsd": { "type": "number" },
+        "balanceBeforeUsd": { "type": "number" },
+        "balanceAfterUsd": { "type": "number" },
+        "referenceType": { "type": "string" },
+        "referenceId": { "type": "string" },
+        "description": { "type": "string" },
+        "actorUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "entryType", "direction", "amountUsd", "balanceBeforeUsd", "balanceAfterUsd", "referenceType", "referenceId", "description", "actorUid", "createdAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "Persistent real-time in-app notification per user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "category": { "type": "string" },
+        "severity": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "isArchived": { "type": "boolean" },
+        "actionRoute": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "category", "severity", "isRead", "isArchived", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer support inquiry and admin reply thread.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "subject": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] },
+        "message": { "type": "string" },
+        "adminReply": { "type": "string" },
+        "repliedByUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userDisplayName", "userEmail", "subject", "category", "priority", "status", "message", "createdAt", "updatedAt"]
+    },
+    "PlatformAnnouncement": {
+      "title": "PlatformAnnouncement",
+      "description": "Admin-published global platform broadcast.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "severity": { "type": "string" },
+        "targetAudience": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdByUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "severity", "targetAudience", "isActive", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "AmlRiskAlert": {
+      "title": "AmlRiskAlert",
+      "description": "Automated compliance and AML risk alert.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "alertType": { "type": "string" },
+        "severity": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "referenceId": { "type": "string" },
+        "summary": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "investigating", "cleared", "escalated"] },
+        "resolutionNote": { "type": "string" },
+        "resolvedByUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "alertType", "severity", "amountUsd", "referenceId", "summary", "status", "createdAt", "updatedAt"]
+    },
+    "MakerCheckerApproval": {
+      "title": "MakerCheckerApproval",
+      "description": "Dual-control Maker-Checker approval request for high-value payouts or adjustments.",
+      "type": "object",
+      "properties": {
+        "actionType": { "type": "string" },
+        "targetUserId": { "type": "string" },
+        "targetReferenceId": { "type": "string" },
+        "amountUsd": { "type": "number" },
+        "payloadSummary": { "type": "string" },
+        "payoutReference": { "type": "string" },
+        "makerUid": { "type": "string" },
+        "makerEmail": { "type": "string" },
+        "checkerUid": { "type": "string" },
+        "checkerEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending_checker", "approved", "rejected"] },
+        "rejectionReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actionType", "targetUserId", "targetReferenceId", "amountUsd", "payloadSummary", "makerUid", "makerEmail", "status", "createdAt", "updatedAt"]
+    },
+    "AuditLogEntry": {
+      "title": "AuditLogEntry",
+      "description": "Immutable admin action audit trail.",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorUid", "actorEmail", "action", "targetType", "targetId", "details", "createdAt"]
+    },
+    "StaffRoleAssignment": {
+      "title": "StaffRoleAssignment",
+      "description": "Admin RBAC staff role assignment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string" },
+        "assignedByUid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "displayName", "role", "assignedByUid", "updatedAt"]
+    },
+    "UserSessionRecord": {
+      "title": "UserSessionRecord",
+      "description": "Active device login session record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "deviceName": { "type": "string" },
+        "platform": { "type": "string" },
+        "appVersion": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "revoked"] },
+        "lastActiveAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "deviceName", "platform", "appVersion", "status", "lastActiveAt", "createdAt"]
+    },
+    "NotificationPreferences": {
+      "title": "NotificationPreferences",
+      "description": "Per-user in-app and email notification channel preferences.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "inAppEnabled": { "type": "boolean" },
+        "emailSecurityEnabled": { "type": "boolean" },
+        "emailFundingEnabled": { "type": "boolean" },
+        "emailTradeReceiptsEnabled": { "type": "boolean" },
+        "emailAnnouncementsEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "inAppEnabled", "emailSecurityEnabled", "emailFundingEnabled", "emailTradeReceiptsEnabled", "emailAnnouncementsEnabled", "updatedAt"]
+    },
+    "EmailTemplate": {
+      "title": "EmailTemplate",
+      "description": "Admin-editable transactional email HTML/text template.",
+      "type": "object",
+      "properties": {
+        "templateKey": { "type": "string" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "htmlBody": { "type": "string" },
+        "textBody": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "updatedByUid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["templateKey", "name", "subject", "htmlBody", "textBody", "isEnabled", "updatedByUid", "updatedAt"]
+    },
+    "EmailJob": {
+      "title": "EmailJob",
+      "description": "Idempotent transactional email outbox job and delivery log.",
+      "type": "object",
+      "properties": {
+        "idempotencyKey": { "type": "string" },
+        "userId": { "type": "string" },
+        "recipientEmail": { "type": "string" },
+        "templateKey": { "type": "string" },
+        "subject": { "type": "string" },
+        "htmlBody": { "type": "string" },
+        "textBody": { "type": "string" },
+        "status": { "type": "string", "enum": ["queued", "awaiting_provider_config", "sent", "failed", "suppressed"] },
+        "provider": { "type": "string" },
+        "providerMessageId": { "type": "string" },
+        "attempts": { "type": "number" },
+        "lastError": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["idempotencyKey", "userId", "recipientEmail", "templateKey", "subject", "htmlBody", "textBody", "status", "provider", "attempts", "createdAt", "updatedAt"]
+    },
+    "EmailSuppression": {
+      "title": "EmailSuppression",
+      "description": "Opt-out / bounce / complaint email suppression entry.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "reason": { "type": "string" },
+        "addedByUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "reason", "addedByUid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "#/entities/UserAccount" }, "description": "User brokerage profile, KYC status, referral code, and cash wallet." },
+    "/users/{userId}/holdings/{holdingId}": { "schema": { "$ref": "#/entities/PortfolioHolding" }, "description": "User's active asset holdings." },
+    "/users/{userId}/watchlist/{symbolId}": { "schema": { "$ref": "#/entities/WatchlistEntry" }, "description": "User's saved watchlist symbols." },
+    "/kyc_requests/{userId}": { "schema": { "$ref": "#/entities/KycSubmission" }, "description": "User KYC identity submissions pending admin approval." },
+    "/deposits/{depositId}": { "schema": { "$ref": "#/entities/DepositRequest" }, "description": "Deposit proof submissions awaiting admin approval." },
+    "/withdrawals/{withdrawalId}": { "schema": { "$ref": "#/entities/WithdrawalRequest" }, "description": "Withdrawal payout requests awaiting manual admin settlement." },
+    "/trades/{tradeId}": { "schema": { "$ref": "#/entities/TradeOrder" }, "description": "Global brokerage trade execution & pending limit/stop orders ledger." },
+    "/broker_config/{configId}": { "schema": { "$ref": "#/entities/BrokerConfig" }, "description": "Global commission rates, trading halts, maker-checker thresholds, and admin deposit wallets." },
+    "/admins/{userId}": { "schema": { "$ref": "#/entities/AdminGrant" }, "description": "Passcode-verified admin access grants." },
+    "/ledger_entries/{entryId}": { "schema": { "$ref": "#/entities/LedgerEntry" }, "description": "Append-only immutable double-entry financial ledger." },
+    "/notifications/{notifId}": { "schema": { "$ref": "#/entities/AppNotification" }, "description": "Per-user persistent real-time notifications." },
+    "/support_tickets/{ticketId}": { "schema": { "$ref": "#/entities/SupportTicket" }, "description": "Customer support tickets and admin replies." },
+    "/announcements/{announcementId}": { "schema": { "$ref": "#/entities/PlatformAnnouncement" }, "description": "Platform-wide announcements published by Admin." },
+    "/aml_alerts/{alertId}": { "schema": { "$ref": "#/entities/AmlRiskAlert" }, "description": "Automated AML and compliance risk alerts." },
+    "/pending_approvals/{approvalId}": { "schema": { "$ref": "#/entities/MakerCheckerApproval" }, "description": "Dual-control Maker-Checker high-value approvals." },
+    "/audit_logs/{logId}": { "schema": { "$ref": "#/entities/AuditLogEntry" }, "description": "Immutable admin audit log." },
+    "/staff_roles/{userId}": { "schema": { "$ref": "#/entities/StaffRoleAssignment" }, "description": "Admin RBAC role assignments." },
+    "/user_sessions/{sessionId}": { "schema": { "$ref": "#/entities/UserSessionRecord" }, "description": "User active device session records." },
+    "/notification_preferences/{userId}": { "schema": { "$ref": "#/entities/NotificationPreferences" }, "description": "User notification & email preferences." },
+    "/email_templates/{templateKey}": { "schema": { "$ref": "#/entities/EmailTemplate" }, "description": "Editable transactional email templates." },
+    "/email_jobs/{jobId}": { "schema": { "$ref": "#/entities/EmailJob" }, "description": "Transactional email outbox & delivery audit log." },
+    "/email_suppressions/{emailKey}": { "schema": { "$ref": "#/entities/EmailSuppression" }, "description": "Suppressed/bounced email addresses." }
+  }
+}
